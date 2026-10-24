@@ -1,164 +1,272 @@
-# PSL Calculator
+# PSL Calculator 🗿
 
-An experimental facial-analysis and face-rating project developed by a team of three for **QM Hacktoberfest Hack Day**, Queen Mary University of London, on **24 October 2026**.
+An experimental AI facial-aesthetics app developed for **QM Hacktoberfest Hack Day**, Queen Mary University of London, on **24 October 2026**.
 
-## Overview
+Upload a selfie, request a rating out of 10, and receive a short appearance-related explanation through a Streamlit interface.
 
-PSL Calculator explores how computer vision and facial geometry can be used to create an interactive, explainable face-analysis experience.
+> Hackathon prototype in active development. The interface and API request code are implemented; successful live model inference still needs verification.
 
-Inspired by looksmaxing and online face-rating tools, our aim is to let users upload a photograph, explore selected facial measurements, and understand how those measurements contribute to a PSL-style score.
+## About the Project
 
-The emphasis is on making the calculation visible: showing what is measured, how it is calculated, and what its limitations are.
+PSL Calculator explores image-based AI interaction through a face-rating experience inspired by looksmaxing communities.
 
-> This project is under active development. Features and integrations listed as planned may change during the hackathon.
+The project has two intended modes:
+
+- **Solo Analysis:** upload a photograph and request an individual score and feedback.
+- **Face-Off PvP:** compete in a multiplayer comparison across timed rounds.
+
+Solo Analysis is the current prototype. PvP is planned and is not included in the current application code.
+
+Scores are generated responses, not scientifically validated measurements of attractiveness.
+
+## Current Features
+
+- Upload JPG, JPEG or PNG images.
+- Preview the uploaded photograph.
+- Start an analysis using the **Calculate PSL Score** button.
+- Send the image and a text prompt to a configured Hugging Face endpoint.
+- Request a JSON response containing a score and short advice.
+- Display the returned score out of 10.
+- Display advice beneath the score.
+- Show a loading indicator during the request.
+- Use a black-and-white interface with custom CSS and Audiowide typography.
+- Load the Hugging Face token from an environment variable.
+
+## How It Works
+
+1. The user uploads an image through Streamlit.
+2. The application displays a preview.
+3. Clicking **Calculate PSL Score** encodes the image as Base64.
+4. The Python application sends the image and prompt through an HTTP POST request.
+5. The code attempts to extract generated text from the response.
+6. It removes surrounding Markdown code fences when present and parses the text as JSON.
+7. Streamlit displays the score and advice.
+
+The prompt requests this response structure:
+
+```json
+{
+  "psl_score": 7.0,
+  "advice": "A short explanation or appearance-related suggestion."
+}
+```
+
+This example illustrates the requested format, not an actual analysis result.
+
+## Rating System
+
+The prompt asks the model for a score from **1 to 10**.
+
+The current implementation does not calculate facial landmarks, symmetry, distances or weighted proportions. It requests a rating directly from the vision-language model.
+
+There is currently no validated scoring formula, population benchmark or guarantee that repeated analyses will produce consistent results.
+
+The parser also does not yet enforce the score range or validate every response field.
+
+## Technology Stack
+
+| Technology | Purpose |
+| --- | --- |
+| Python | Application logic |
+| Streamlit | Web interface, uploads and result display |
+| Requests | HTTP requests to the model endpoint |
+| python-dotenv | Loading local environment variables |
+| Base64 | Encoding image bytes for the request |
+| JSON | Parsing structured output |
+| HTML and CSS | Interface styling |
+| Google Fonts | Audiowide typography |
+| Hugging Face | Configured external inference service |
+| Google PaliGemma | Intended image-and-text model |
+
+### Configured Model
+
+Model identifier:
+
+```text
+google/paligemma-3b-mix-224
+```
+
+Endpoint currently used in the code:
+
+```text
+https://api-inference.huggingface.co/models/google/paligemma-3b-mix-224
+```
+
+Endpoint availability, task support and request-format compatibility must be verified. Having a model identifier and token does not by itself confirm that hosted inference is available.
+
+- [PaliGemma model card](https://huggingface.co/google/paligemma-3b-mix-224)
+- [Gemma model terms](https://ai.google.dev/gemma/terms)
+
+This prototype targets PaliGemma 3B. It does not currently integrate Gemma 4 or the Gemini API.
+
+## Run Locally
+
+The instructions below assume the supplied application code is saved as `score_face.py`. Substitute the actual filename if different.
+
+### 1. Open the project directory
+
+Download or clone the repository, then open a terminal in its root folder.
+
+### 2. Create a virtual environment
+
+```bash
+python3 -m venv .venv
+```
+
+Activate it on macOS or Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+Activate it on Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+### 3. Install dependencies
+
+```bash
+python -m pip install streamlit requests python-dotenv
+```
+
+### 4. Configure the token
+
+Create a `.env` file in the project root:
+
+```dotenv
+HF_TOKEN=your_hugging_face_token_here
+```
+
+Use an account and token with the permissions required by the chosen inference service. Complete any model-access requirements shown on the model page.
+
+Keep `.env` out of version control. Ensure `.gitignore` includes:
+
+```gitignore
+.env
+.venv/
+__pycache__/
+```
+
+### 5. Start the application
+
+```bash
+python -m streamlit run score_face.py
+```
+
+Open the local URL printed in the terminal.
+
+Starting the interface does not confirm that the external inference request is working.
+
+## Current Fallback Behaviour
+
+The current code catches exceptions during the API request and response parsing, then substitutes:
+
+- A fixed score of **6.5/10**.
+- A fixed advice message that does not depend on the uploaded image.
+
+The exception is printed to the server console, but the interface currently displays the fallback in the same way as a model response.
+
+**Fallback output is placeholder data, not AI analysis.** It must not be presented as evidence of successful inference during a demonstration.
+
+A priority improvement is to show a clear error with a retry option, or explicitly label a separate demonstration mode.
 
 ## Planned Features
 
-- **Photo upload:** analyse a clear, front-facing photograph.
-- **Facial landmark detection:** identify points around the eyes, nose, mouth and facial outline.
-- **Visual overlay:** display the landmarks and measurement lines on the photograph.
-- **Facial proportions:** calculate selected distance ratios, including relative eye spacing and face width-to-height ratio.
-- **Symmetry estimates:** compare selected corresponding landmarks.
-- **Explained scoring:** show how individual measurements contribute to an experimental PSL-style rating.
-- **AI explanations:** provide a readable explanation of the measurements and their limitations.
-- **Input validation:** provide feedback when a photograph is unsuitable for analysis.
+### Improved Solo Analysis
 
-### Stretch Goal
+- Dedicated home screen and mode selection.
+- Separate sections for highlighted features and suggestions.
+- Clearer explanations of generated ratings.
+- Image suitability checks.
+- Validated response fields and score ranges.
+- Visible API error messages and retry controls.
 
-Compare two photographs of the same person to demonstrate how pose and expression affect the measurements.
+### Face-Off PvP
 
-## How It Is Intended to Work
+A planned two-player mode featuring:
 
-1. The user uploads a photograph.
-2. A computer-vision model identifies facial landmarks.
-3. Application code calculates distances, ratios and symmetry measurements.
-4. A documented scoring formula combines selected measurements.
-5. The interface displays the measurements, visual overlay and score breakdown.
-6. An optional AI integration explains the results in plain language.
+- Player nicknames and separate image uploads.
+- Three rounds.
+- A proposed 15-second timer per round.
+- Side-by-side results.
+- Round points and an overall match result.
+- A tiebreaker when needed.
+- A rematch option.
 
-Numerical measurements should come from the calculation code. The language model's role is to explain those results, rather than invent measurements.
+The round-winning rule and timer behaviour are still being finalised. PvP scoring should use the same criteria for both players and exclude fallback results.
 
-## Technology
+## Limitations
 
-The final stack is being confirmed during development.
+- The model has not been validated as an attractiveness assessor.
+- Scores and explanations may be inconsistent or inaccurate.
+- Lighting, pose, expression and image quality may affect responses.
+- Asking a model to be objective does not make its ratings objective.
+- Generated advice may contain unsupported claims about facial anatomy or appearance.
+- The current code does not check for exactly one face.
+- HTTP status handling and response validation need improvement.
+- A successful-looking result may currently be fixed fallback data.
 
-| Component | Current or proposed technology |
-| --- | --- |
-| Source code and collaboration | GitHub |
-| Existing Python file | `score_face.py` |
-| Facial landmark detection | MediaPipe Face Landmarker — proposed |
-| Web interface | Framework to be confirmed |
-| AI explanations | Gemma 4 through the Gemini API — proposed |
-| Measurement logic | Team-written geometry and scoring calculations |
+This is an entertainment and learning prototype. Its output is not a medical assessment or a measure of personal worth.
 
-### Proposed AI Integration
+## Image Handling
 
-We plan to explore Gemma 4 for explaining calculated measurements and answering questions about the results.
+Uploaded images are received by the Streamlit server. When analysis is requested, image data is included in an outbound request to the configured Hugging Face endpoint.
 
-The intended contribution is to make the numerical analysis understandable, including explaining why photographs of the same person may produce different measurements.
+Base64 is an encoding format, not encryption.
 
-The exact model, configuration and dependencies will be documented once integration is complete.
+The supplied code does not explicitly save uploaded images to disk or a database. This does not establish the retention behaviour of the hosting environment or external service.
 
-References:
-
-- [MediaPipe Face Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker)
-- [Gemma through the Gemini API](https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api)
-- [Gemma Terms](https://ai.google.dev/gemma/terms)
-
-## Project Files
-
-- `score_face.py` — Python source file; implementation details will be documented as development progresses.
-- `README.md` — project overview and documentation.
-- `LICENSE` — repository licence terms.
-- `.gitignore` — files excluded from version control.
-
-## Getting Started
-
-Installation and execution instructions will be added once the dependencies and application entry point are finalised.
-
-The completed instructions will cover:
-
-1. Required runtime and version.
-2. Dependency installation.
-3. Model downloads, if required.
-4. Environment variables for any external API.
-5. Commands to run the application.
-
-Do not commit API keys or other credentials to the repository.
-
-## Understanding the Results
-
-The PSL-style rating is an experimental entertainment score based on a team-defined formula. It is not a scientifically validated measure of attractiveness, health or personal worth.
-
-Results may be affected by:
-
-- Head position and camera angle.
-- Camera distance and perspective.
-- Lighting and image quality.
-- Facial expression.
-- Glasses, hair or other obstructions.
-- Errors in landmark detection.
-
-Facial proportions are not universal beauty standards. Measurements from a photograph should not be treated as precise physical measurements.
-
-The final scoring documentation will identify the measurements, normalisation methods and component weights used.
-
-## Privacy
-
-Our intended approach is to minimise the collection and retention of photographs.
-
-Browser-based image processing and sending only calculated measurements for AI explanations are proposed design choices. Actual processing, external requests and retention behaviour will be documented once implemented.
-
-Only upload photographs you own or have permission to use.
+Only upload images you own or have permission to use. Keep API credentials private.
 
 ## Team
 
-A team of three participating in QM Hacktoberfest.
+Built by a team of three at QM Hacktoberfest.
 
-- **[Vedant]** — [Contribution]
-- **[Annukul]** — [Contribution]
-- **[Mustafe]** — [Contribution]
+- **[Annukul Ghale  / Annukul06]** — [Contribution]
+- **[Vedant Trivedi / Vedu56]** — [Contribution]
+- **[Mustafe Musse / africandude]** — [Contribution]
 
 ## Demo
 
-**Video:** [Add unlisted YouTube link]
+**Unlisted YouTube video:** [Add link]
 
-**Live application:** [Add deployment link, if available]
+**Live application:** [Add link if deployed]
 
-The hackathon demo will show the working application, explain the team's contribution, and describe how any AI models are used.
+The submission video should demonstrate the working application and clearly distinguish live model output from any demonstration data.
 
-## Hackathon
+## Hackathon Submission
 
 **Event:** Hacktoberfest Hack Day — Queen Mary Computer Science Society  
 **Date:** 24 October 2026  
-**Submission deadline:** 15:30, London time
+**Deadline:** 15:30, London time
 
-Potential prize categories, subject to the completed implementation meeting the requirements:
+Submission checklist:
 
-- Best Overall Hack.
-- Best Open-Source AI Project.
-- Best Use of Gemma 4.
+- [ ] Verify a genuine successful model response.
+- [ ] Replace or visibly label the fixed fallback.
+- [ ] Update this README to match the final implementation.
+- [ ] Add team details and contributions.
+- [ ] Confirm repository visibility and licence.
+- [ ] Document models, dependencies and AI development tools used.
+- [ ] Upload an unlisted YouTube video of no more than three minutes.
+- [ ] Submit the repository and video links before the deadline.
+- [ ] Select every prize whose requirements the final project meets.
+
+The current PaliGemma integration does not establish eligibility for the **Best Use of Gemma 4** prize, which requires an actual Gemma 4 integration.
 
 [Event and submission page](https://www.mlh.com/events/hacktoberfest-hack-day-london-x-queen-mary-computer-science-society)
 
 ## Licence
 
-See [LICENSE](LICENSE) for this repository's licence terms.
+See [LICENSE](LICENSE) for the project's source-code licence.
 
-Third-party libraries and model weights remain subject to their own licences and terms. The final dependency list will identify the packages, models and versions used.
-
-## Before Submission
-
-- [ ] Update this README to reflect the implemented features and final technology stack.
-- [ ] Add installation and run instructions.
-- [ ] Document the scoring formula.
-- [ ] Add team names and actual contributions.
-- [ ] Confirm the repository is public and has an appropriate open-source licence for the open-source AI prize.
-- [ ] Document model and dependency licences.
-- [ ] Add an unlisted YouTube demo of no more than three minutes.
-- [ ] Demonstrate the working project and relevant AI code.
-- [ ] Submit before 15:30 and select every eligible prize category.
+Third-party packages and model weights retain their own licences and terms. The repository's licence does not replace the PaliGemma model terms.
 
 ## Acknowledgements
 
-Thanks to Queen Mary Computer Science Society and Major League Hacking for organising the event, and to the developers of the open-source tools used in the project.
+- Queen Mary Computer Science Society and Major League Hacking.
+- Google for PaliGemma.
+- Hugging Face for model distribution and inference tooling.
+- Streamlit and the developers of the project's dependencies.
