@@ -232,7 +232,7 @@ Built by a team of three at QM Hacktoberfest.
 
 **Unlisted YouTube video:** https://youtube.com/shorts/MkwQNWr8UYE?si=22yp6nTkJ7X-nx4R , https://youtube.com/shorts/51Be39lfAwY?si=w9_CuQH6PsaJ7y1t , https://youtube.com/shorts/1bp-vodpuLs?si=3L2aHVwLp03RagxT
 
-**Live application:** 
+**Live application:**  https://psl-calculator-mlh-hack-5dnqeov6yyaqpqkqq9eezj.streamlit.app/
 
 The submission video should demonstrate the working application and clearly distinguish live model output from any demonstration data.
 
