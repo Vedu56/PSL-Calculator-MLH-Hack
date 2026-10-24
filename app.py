@@ -17,7 +17,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("AI Aesthetics Rater (PSL Calculator)")
+st.title("PSL Calculator")
 st.write("Powered by Multi-Agent Vision Architecture.")
 
 # 2. App Logic
