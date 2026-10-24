@@ -54,19 +54,19 @@ TIERS = [
 TOP_TIER = "Chad / True Adam"
 
 EYES_JARGON = [
-    "positive canthal tilt with strong hunter eyes giving an intense predatory gaze",
-    "neutral orbital vector with deep-set sockets and solid under-eye support",
-    "slight negative canthal tilt offset by optimal interpupillary distance and heavy brow ridge framing",
+    "• positive canthal tilt with strong hunter eyes giving an intense predatory gaze \n",
+    "• neutral orbital vector with deep-set sockets and solid under-eye support \n",
+    "• light negative canthal tilt offset by optimal interpupillary distance and heavy brow ridge framing \n",
 ]
 BONE_JARGON = [
-    "outstanding maxilla forward growth and a razor-sharp gonial angle",
-    "solid ramus height with well-defined zygomatic arches providing clean facial dimorphism",
-    "clean mandibular plane angle and balanced lower third proportions",
+    "• outstanding maxilla forward growth and a razor-sharp gonial angle \n",
+    "• solid ramus height with well-defined zygomatic arches providing clean facial dimorphism \n",
+    "• lean mandibular plane angle and balanced lower third proportions \n",
 ]
 ACTION_JARGON = [
-    "Begin intensive softmaxxing: reduce sodium to eliminate submental water retention, maintain strict mewing posture for upward palatal force, and hit heavy compound lifts to optimize your overall frame.",
-    "Execute hard-softmaxxing protocol: clear up skin micro-texture, focus on neck training for a thicker optical jaw base, and practice proper chewing mechanics to maximize masseter hypertrophy.",
-    "Maintain your baseline while optimizing framing: grow out hair for ideal temporal width, maintain low body fat percentage for peak jawline definition, and lean into your natural dimorphic strengths.",
+    "• Begin intensive softmaxxing: reduce sodium to eliminate submental water retention, maintain strict mewing posture for upward palatal force, and hit heavy compound lifts to optimize your overall frame. \n",
+    "• Execute hard-softmaxxing protocol: clear up skin micro-texture, focus on neck training for a thicker optical jaw base, and practice proper chewing mechanics to maximize masseter hypertrophy. \n",
+    "• Maintain your baseline while optimizing framing: grow out hair for ideal temporal width, maintain low body fat percentage for peak jawline definition, and lean into your natural dimorphic strengths. \n",
 ]
 
 # How long the scan + loading animation plays (the result is held back until it finishes).
