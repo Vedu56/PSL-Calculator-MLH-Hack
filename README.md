@@ -210,9 +210,9 @@ Only upload images you own or have permission to use. Keep API credentials priva
 
 Built by a team of three at QM Hacktoberfest.
 
-- **[Annukul Ghale  / Annukul06]** — Frontend, ideas
-- **[Vedant Trivedi / Vedu56]** — Backend, planning - initial idea, APIs, tokens and app deployment.
-- **[Mustafe Musse / africandude]** — Frontend, prompting 
+- **Annukul Ghale  / Annukul06** — Frontend, ideas
+- **Vedant Trivedi / Vedu56** — Backend, planning - initial idea, APIs, tokens and app deployment.
+- **Mustafe Musse / africandude** — Frontend, prompting 
 
 ## Demo
 
