@@ -67,7 +67,7 @@ def render():
         <a class="lp-btn" href="?page=pvp" target="_self">
           <span class="lp-ico lp-ico-vs" aria-hidden="true">VS</span>
           <span class="lp-btn-label">PSL PvP</span>
-          <span class="lp-chip lp-chip-muted">Coming soon</span>
+          <span class="lp-chip"><i aria-hidden="true"></i>2 players</span>
         </a>
       </div>
     </section>

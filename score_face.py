@@ -604,6 +604,16 @@ def render_result(data: dict, fallback: bool):
     if fallback and data.get("why"):  # why the live analysis didn't run (for fixing it)
         st.caption(f"Live analysis error: {data['why']}")
 
+def analyze_photo(file_bytes: bytes, file_name: str) -> tuple[dict, bool]:
+    """Score one photo for PvP exactly like the PSL Score page: Gemma first, labelled sample if it fails.
+    Returns (result, used_fallback)."""
+    try:
+        return call_model(as_jpeg(file_bytes)), False
+    except Exception as e:
+        print(f"[PSL] PvP live analysis failed, using sample result: {e!r}", flush=True)
+        return sample_result(Photo(file_bytes, file_name)), True
+
+
 # =====================================================================
 # PSL Score page (opened from the home page)
 # =====================================================================
@@ -677,6 +687,6 @@ if page == "score":
     render_score_page()
 elif page == "pvp":
     site_ui.back_button()
-    pvp_page.render()
+    pvp_page.render(analyze_photo, tier_for)
 else:
     landing_page.render()
