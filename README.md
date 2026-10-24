@@ -103,11 +103,11 @@ This prototype targets PaliGemma 3B. It does not currently integrate Gemma 4 or 
 
 The instructions below assume the supplied application code is saved as `score_face.py`. Substitute the actual filename if different.
 
-### 1. Open the project directory
+### Open the project directory
 
 Download or clone the repository, then open a terminal in its root folder.
 
-### 2. Create a virtual environment
+### Create a virtual environment
 
 ```bash
 python3 -m venv .venv
@@ -133,23 +133,9 @@ python -m pip install streamlit requests python-dotenv
 
 ### 4. Configure the token
 
-Create a `.env` file in the project root:
-
-```dotenv
-HF_TOKEN=your_hugging_face_token_here
-```
-
 Use an account and token with the permissions required by the chosen inference service. Complete any model-access requirements shown on the model page.
 
-Keep `.env` out of version control. Ensure `.gitignore` includes:
-
-```gitignore
-.env
-.venv/
-__pycache__/
-```
-
-### 5. Start the application
+### Start the application
 
 ```bash
 python -m streamlit run score_face.py
@@ -225,7 +211,7 @@ Only upload images you own or have permission to use. Keep API credentials priva
 Built by a team of three at QM Hacktoberfest.
 
 - **[Annukul Ghale  / Annukul06]** — Frontend, ideas
-- **[Vedant Trivedi / Vedu56]** — Backend, planning, APIs
+- **[Vedant Trivedi / Vedu56]** — Backend, planning - initial idea, APIs, tokens and app deployment.
 - **[Mustafe Musse / africandude]** — Frontend, prompting 
 
 ## Demo
@@ -236,23 +222,6 @@ Built by a team of three at QM Hacktoberfest.
 
 The submission video should demonstrate the working application and clearly distinguish live model output from any demonstration data.
 
-## Hackathon Submission
-
-**Event:** Hacktoberfest Hack Day — Queen Mary Computer Science Society  
-**Date:** 24 October 2026  
-**Deadline:** 15:30, London time
-
-Submission checklist:
-
-- [ ] Verify a genuine successful model response.
-- [ ] Replace or visibly label the fixed fallback.
-- [ ] Update this README to match the final implementation.
-- [ ] Add team details and contributions.
-- [ ] Confirm repository visibility and licence.
-- [ ] Document models, dependencies and AI development tools used.
-- [ ] Upload an unlisted YouTube video of no more than three minutes.
-- [ ] Submit the repository and video links before the deadline.
-- [ ] Select every prize whose requirements the final project meets.
 
 The current PaliGemma integration does not establish eligibility for the **Best Use of Gemma 4** prize, which requires an actual Gemma 4 integration.
 
