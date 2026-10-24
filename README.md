@@ -224,15 +224,15 @@ Only upload images you own or have permission to use. Keep API credentials priva
 
 Built by a team of three at QM Hacktoberfest.
 
-- **[Annukul Ghale  / Annukul06]** — [Contribution]
-- **[Vedant Trivedi / Vedu56]** — [Contribution]
-- **[Mustafe Musse / africandude]** — [Contribution]
+- **[Annukul Ghale  / Annukul06]** — Frontend, ideas
+- **[Vedant Trivedi / Vedu56]** — Backend, planning, APIs
+- **[Mustafe Musse / africandude]** — Frontend, prompting 
 
 ## Demo
 
-**Unlisted YouTube video:** [Add link]
+**Unlisted YouTube video:** https://youtube.com/shorts/MkwQNWr8UYE?si=22yp6nTkJ7X-nx4R , https://youtube.com/shorts/51Be39lfAwY?si=w9_CuQH6PsaJ7y1t , https://youtube.com/shorts/1bp-vodpuLs?si=3L2aHVwLp03RagxT
 
-**Live application:** [Add link if deployed]
+**Live application:** 
 
 The submission video should demonstrate the working application and clearly distinguish live model output from any demonstration data.
 
