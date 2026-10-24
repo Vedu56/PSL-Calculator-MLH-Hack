@@ -223,13 +223,13 @@ Built by a team of three at QM Hacktoberfest.
 The submission video should demonstrate the working application and clearly distinguish live model output from any demonstration data.
 
 
-The current PaliGemma integration does not establish eligibility for the **Best Use of Gemma 4** prize, which requires an actual Gemma 4 integration.
+The current Gemma 4 integration does not establish eligibility for the **Best Use of Gemma 4** prize, which requires an actual Gemma 4 integration.
 
 [Event and submission page](https://www.mlh.com/events/hacktoberfest-hack-day-london-x-queen-mary-computer-science-society)
 
 ## Licence
 
-See [LICENSE](LICENSE) for the project's source-code licence.
+See the LICENSE for the project's source-code licence.
 
 Third-party packages and model weights retain their own licences and terms. The repository's licence does not replace the PaliGemma model terms.
 
