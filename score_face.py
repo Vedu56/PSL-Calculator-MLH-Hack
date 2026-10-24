@@ -42,14 +42,15 @@ UPLOAD_TYPES = ["jpg", "jpeg", "png"] + (["heic", "heif"] if HEIC_SUPPORTED else
 # ---- PSL tier scale and advice pools (from app.py) ----
 # (score upper bound, tier label)
 TIERS = [
-    (2.0, "Deformed / Subhuman"),
-    (3.0, "Very Unattractive"),
-    (3.5, "Low-Tier Normie (LTN)"),
-    (4.5, "Mid-Tier Normie (MTN)"),
-    (5.0, "True Mid-Tier Normie"),
-    (6.0, "High-Tier Normie (HTN)"),
+    (1.0, "Subhuman"),
+    (3.0, "Sub-3"),
+    (4.5, "Low-Tier Normie (LTN)"),
+    (5.0, "Mid-Tier Normie (MTN)"),
+    (5.5, "True Mid-Tier Normie (TMT)"),
+    (6.5, "High-Tier Normie (HTN)"),
     (7.0, "Chadlite"),
 ]
+
 TOP_TIER = "Chad / True Adam"
 
 EYES_JARGON = [
