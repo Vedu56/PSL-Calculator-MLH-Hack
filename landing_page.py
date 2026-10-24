@@ -49,7 +49,6 @@ def render():
     <div class="lp-links">
       <a href="?page=score" target="_self">PSL Score</a>
       <a href="?page=pvp" target="_self">PSL PvP</a>
-      <a class="lp-pill" href="?page=score" target="_self">Play <span class="lp-arrow" aria-hidden="true">&rarr;</span></a>
     </div>
   </nav>
 
