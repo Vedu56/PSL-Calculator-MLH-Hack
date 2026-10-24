@@ -29,7 +29,7 @@ import site_ui
 # =====================================================================
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
-API_URL = "https://api-inference.huggingface.co/models/google/paligemma-3b-mix-224"
+API_URL = "https://api-inference.huggingface.co/models/google/gemma-4b-26ba4bit"
 HEADERS = {"Authorization": f"Bearer {HF_TOKEN}", "Content-Type": "application/json"}
 
 PROMPT = (
