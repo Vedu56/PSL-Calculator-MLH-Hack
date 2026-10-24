@@ -2,7 +2,6 @@ import streamlit as st
 import time
 from PIL import Image
 import pillow_heif
-import score_face
 
 pillow_heif.register_heif_opener()
 # 1. UI Setup (Minimalist Black-and-White Aesthetic)
@@ -17,7 +16,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("AI Aesthetics Rater (PSL Calculator)")
+st.title("PSL Calculator")
 st.write("Powered by Multi-Agent Vision Architecture.")
 
 # 2. App Logic
