@@ -163,7 +163,7 @@ Starting the interface does not confirm that the external inference request is w
 
 The current code catches exceptions during the API request and response parsing, then substitutes:
 
-- A fixed score of **6.5/10**.
+
 - A fixed advice message that does not depend on the uploaded image.
 
 The exception is printed to the server console, but the interface currently displays the fallback in the same way as a model response.
