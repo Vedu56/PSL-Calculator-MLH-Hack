@@ -12,6 +12,10 @@ import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from PIL import Image, ImageOps
 
+import landing_page
+import pvp_page
+import site_ui
+
 # =====================================================================
 # Config
 # =====================================================================
@@ -122,7 +126,8 @@ const img = new Image();
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const statusEl = document.getElementById("status");
-let pts = null, edges = [], bb = null, base = null, S = 1, t0 = null;
+let pts = null, edges = [], bb = null, base = null, S = 1;
+const START = performance.now();   // the scan length counts from when the photo appears
 
 function setStatus(t) { statusEl.textContent = t; }
 function ease(u) { return 0.5 - 0.5 * Math.cos(Math.PI * u); }
@@ -229,8 +234,7 @@ function brackets(alpha) {
 }
 
 function loop(ts) {
-  if (t0 === null) t0 = ts;
-  const el = ts - t0;
+  const el = ts - START;
   if (el >= TOTAL) { drawFinal(); return; }
 
   const HALF = 2600;                                   // one sweep (down or up), eased in/out for smoothness
@@ -284,10 +288,8 @@ function noFace(reason) {
   const msg = reason === "lib" ? "SCAN VISUAL UNAVAILABLE (CHECK INTERNET)" : "NO FACE FOUND - USE A CLEAR FRONT-FACING PHOTO";
   S = canvas.width / 400;
   if (MODE !== "scanning") { paintPlain(true); setStatus(msg); return; }
-  let t = null;
   (function frame(ts) {
-    if (t === null) t = ts;
-    const el = ts - t;
+    const el = ts - START;
     paintPlain(true);
     setStatus(msg);
     if (el >= TOTAL) return;
@@ -392,7 +394,7 @@ def render_stage(photo, mode: str):
     html = (
         SCAN_HTML.replace("__IMG__", data_url)
         .replace("__MODE__", mode)
-        .replace("__TOTAL__", str(int(SCAN_SECONDS * 1000)))
+        .replace("__TOTAL__", str(int(SCAN_SECONDS * 1000) - 700))  # ends just before the result swaps in
         .replace("__H__", str(height))
     )
     components.html(html, height=height + 6)
@@ -430,58 +432,76 @@ def render_result(data: dict, fallback: bool):
 
 
 # =====================================================================
-# App
+# PSL Score page (opened from the home page)
 # =====================================================================
-st.set_page_config(page_title="PSL Calculator", page_icon="🗿", layout="centered")
-st.markdown(CSS, unsafe_allow_html=True)
-render_header()
+def render_score_page():
+    st.markdown(CSS, unsafe_allow_html=True)
+    render_header()
 
-photo, source = pick_photo()
+    photo, source = pick_photo()
 
-if not photo:
-    st.session_state.pop("result", None)
-    if source == "Upload":
-        st.info("Upload a JPG/PNG or switch to Camera to take a selfie.")
-else:
-    pid = hashlib.md5(photo.getvalue()).hexdigest()
-    res = st.session_state.get("result")
-    if res and res["pid"] != pid:          # a different photo was chosen: forget the old result
-        res = None
+    if not photo:
         st.session_state.pop("result", None)
-
-    st.caption(f"TARGET LOCKED 🎯 · {photo.name} · {photo.size / 1024:.0f} KB")
-    stage_slot = st.empty()                # the big photo, which is where the scan plays
-    btn_slot = st.empty()                  # the CALCULATE button, which turns into the loader
-
-    def show_stage(mode: str):
-        with stage_slot.container():
-            render_stage(photo, mode)
-
-    btn_n = st.session_state.setdefault("btn_n", 0)
-    show_stage("done" if res else "idle")
-    clicked = btn_slot.button("RESCAN" if res else "CALCULATE PSL", key=f"calc_{btn_n}")
-
-    if source == "Camera":
-        if st.button("RETAKE PHOTO", key="retake"):
-            st.session_state.pop("cam_bytes", None)
+        if source == "Upload":
+            st.info("Upload a JPG/PNG or switch to Camera to take a selfie.")
+    else:
+        pid = hashlib.md5(photo.getvalue()).hexdigest()
+        res = st.session_state.get("result")
+        if res and res["pid"] != pid:          # a different photo was chosen: forget the old result
+            res = None
             st.session_state.pop("result", None)
-            st.session_state["cam_n"] = st.session_state.get("cam_n", 0) + 1
-            st.rerun()
 
-    if clicked:
-        show_stage("scanning")
-        btn_slot.markdown(LOADER_HTML, unsafe_allow_html=True)
-        started = time.time()
-        fallback = False
-        try:
-            data = call_model(photo.getvalue())
-        except Exception:
-            data, fallback = dict(FALLBACK_RESULT), True      # live analysis failed: show a labelled sample result
-        time.sleep(max(0.0, SCAN_SECONDS - (time.time() - started)))
-        res = {"pid": pid, "data": data, "fallback": fallback}
-        st.session_state["result"] = res
-        st.session_state["btn_n"] = btn_n + 1                 # fresh key so the next click is registered
-        btn_slot.button("RESCAN", key=f"calc_{btn_n + 1}")
+        st.caption(f"TARGET LOCKED 🎯 · {photo.name} · {photo.size / 1024:.0f} KB")
+        stage_slot = st.empty()                # the big photo, which is where the scan plays
+        btn_slot = st.empty()                  # the CALCULATE button, which turns into the loader
 
-    if res:
-        render_result(res["data"], res["fallback"])
+        def show_stage(mode: str):
+            with stage_slot.container():
+                render_stage(photo, mode)
+
+        btn_n = st.session_state.setdefault("btn_n", 0)
+        show_stage("done" if res else "idle")
+        clicked = btn_slot.button("RESCAN" if res else "CALCULATE PSL", key=f"calc_{btn_n}")
+
+        if source == "Camera":
+            if st.button("RETAKE PHOTO", key="retake"):
+                st.session_state.pop("cam_bytes", None)
+                st.session_state.pop("result", None)
+                st.session_state["cam_n"] = st.session_state.get("cam_n", 0) + 1
+                st.rerun()
+
+        if clicked:
+            show_stage("scanning")
+            btn_slot.markdown(LOADER_HTML, unsafe_allow_html=True)
+            started = time.time()
+            fallback = False
+            try:
+                data = call_model(photo.getvalue())
+            except Exception:
+                data, fallback = dict(FALLBACK_RESULT), True      # live analysis failed: show a labelled sample result
+            time.sleep(max(0.0, SCAN_SECONDS - (time.time() - started)))
+            show_stage("done")                                    # analysis finished: remove the green scan
+            res = {"pid": pid, "data": data, "fallback": fallback}
+            st.session_state["result"] = res
+            st.session_state["btn_n"] = btn_n + 1                 # fresh key so the next click is registered
+            btn_slot.button("RESCAN", key=f"calc_{btn_n + 1}")
+
+        if res:
+            render_result(res["data"], res["fallback"])
+
+
+# =====================================================================
+# App: home page, routing to the PSL Score and PSL PvP pages
+# =====================================================================
+page = site_ui.current_page()
+st.set_page_config(page_title="PSL Calculator", page_icon="🗿", layout="wide" if page == "home" else "centered")
+site_ui.inject_theme(page)
+
+if page == "score":
+    site_ui.back_button()
+    render_score_page()
+elif page == "pvp":
+    site_ui.back_button()
+    pvp_page.render()
+else:
+    landing_page.render()
