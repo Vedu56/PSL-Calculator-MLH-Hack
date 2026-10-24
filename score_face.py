@@ -2,6 +2,7 @@ import base64
 import hashlib
 import io
 import json
+import os
 import re
 import time
 
@@ -27,13 +28,37 @@ import site_ui
 # Config
 # =====================================================================
 load_dotenv()
-HF_TOKEN = os.getenv("HF_TOKEN")
-API_URL = "https://api-inference.huggingface.co/models/google/paligemma-3b-mix-224"
-HEADERS = {"Authorization": f"Bearer {HF_TOKEN}", "Content-Type": "application/json"}
+
+
+def _secret(name: str):
+    """Read a key from .env / environment, or from Streamlit Cloud's Secrets."""
+    value = os.getenv(name)
+    if not value:
+        try:
+            value = st.secrets.get(name)
+        except Exception:  # no secrets file locally
+            value = None
+    value = (value or "").strip().strip('"').strip("'")
+    if not value or value.upper().startswith("PASTE"):  # empty, or the placeholder still in .env
+        return None
+    return value
+
+
+# Gemma 4 through the Gemini API (free key: https://aistudio.google.com).
+GEMINI_API_KEY = _secret("GEMINI_API_KEY")
+GEMINI_BASE = os.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com")
+GEMMA_MODELS = ["gemma-4-26b-a4b-it", "gemma-4-31b-it"]  # tried in order
+MODEL_DEADLINE = 60  # seconds in total: after this, give up and show the sample result
 
 PROMPT = (
-    "Rate the facial aesthetics of this photo on a 1-10 PSL scale and give constructive, "
-    'objective advice. Reply ONLY with JSON: {"psl_score": <number>, "advice": "<short string>"}'
+    "You are the scoring engine of PSL Calculator, a light-hearted looksmaxxing app. "
+    "Look at the face in this photo and rate its facial aesthetics on the PSL scale from 1 to 10 "
+    "(one decimal place; most people land between 3 and 7). Judge things like facial harmony, "
+    "symmetry, jawline, eye area and skin, and note that lighting, angle and expression affect the photo. "
+    "Then give short, constructive, specific looksmaxxing advice (2-3 sentences, community terms like "
+    "softmaxxing, mewing or canthal tilt are fine, nothing cruel). "
+    'Reply with ONLY a JSON object: {"psl_score": <number>, "advice": "<string>"}. '
+    'If there is no clearly visible human face, reply {"psl_score": null, "advice": "no face"}.'
 )
 
 UPLOAD_TYPES = ["jpg", "jpeg", "png"] + (["heic", "heif"] if HEIC_SUPPORTED else [])
@@ -41,14 +66,15 @@ UPLOAD_TYPES = ["jpg", "jpeg", "png"] + (["heic", "heif"] if HEIC_SUPPORTED else
 # ---- PSL tier scale and advice pools (from app.py) ----
 # (score upper bound, tier label)
 TIERS = [
-    (2.0, "Deformed / Subhuman"),
-    (3.0, "Very Unattractive"),
-    (3.5, "Low-Tier Normie (LTN)"),
-    (4.5, "Mid-Tier Normie (MTN)"),
-    (5.0, "True Mid-Tier Normie"),
-    (6.0, "High-Tier Normie (HTN)"),
+    (1.0, "Subhuman"),
+    (3.0, "Sub-3"),
+    (4.5, "Low-Tier Normie (LTN)"),
+    (5.0, "Mid-Tier Normie (MTN)"),
+    (5.5, "True Mid-Tier Normie (TMT)"),
+    (6.5, "High-Tier Normie (HTN)"),
     (7.0, "Chadlite"),
 ]
+
 TOP_TIER = "Chad / True Adam"
 
 EYES_JARGON = [
@@ -352,22 +378,116 @@ img.src = "__IMG__";
 # =====================================================================
 # Model call
 # =====================================================================
-def call_model(file_bytes: bytes) -> dict:
-    """Call the HF inference API and parse JSON. Raises on any failure."""
-    payload = {"inputs": {"image": base64.b64encode(file_bytes).decode(), "question": PROMPT}}
-    r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=20)
-    r.raise_for_status()
-    body = r.json()
-    if isinstance(body, list):
-        raw = body[0].get("generated_text") or body[0].get("answer") or ""
-    else:
-        raw = str(body)
+def _parse_model_reply(body: dict) -> dict:
+    """Pull {"psl_score", "advice"} out of a generateContent reply. Raises if it isn't usable."""
+    parts = (body.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
+    raw = "".join(p.get("text", "") for p in parts if not p.get("thought"))
     match = re.search(r"\{.*\}", raw, re.S)  # find the JSON object even inside code fences
     if not match:
         raise ValueError("Model did not return JSON")
     data = json.loads(match.group(0))
-    data["psl_score"] = max(1.0, min(10.0, float(data["psl_score"])))
-    return data
+    if data.get("psl_score") is None:
+        raise ValueError("No face found")
+    score = max(1.0, min(10.0, round(float(data["psl_score"]), 1)))
+    advice = str(data.get("advice", "")).strip()
+    if not advice:
+        raise ValueError("No advice returned")
+    return {"psl_score": score, "advice": advice}
+
+
+# Google accepts a key three ways. New AI Studio keys start with "AQ." and some setups only
+# accept those one way, so each way is tried until one works; the working one is remembered.
+AUTH_STYLES = ("header", "query", "bearer")
+_auth_style = {"ok": None}
+
+
+def _auth(style: str):
+    """Return (headers, params) that carry the key in the given style."""
+    if style == "header":
+        return {"x-goog-api-key": GEMINI_API_KEY}, {}
+    if style == "query":
+        return {}, {"key": GEMINI_API_KEY}
+    return {"Authorization": f"Bearer {GEMINI_API_KEY}"}, {}
+
+
+def _time_left(deadline: float) -> float:
+    left = deadline - time.time()
+    if left < 2:
+        raise TimeoutError("Gemma took too long")
+    return min(55.0, left)
+
+
+def _post(url: str, deadline: float, headers: dict, **kwargs) -> requests.Response:
+    """POST with the key, trying each auth style on 401/403 until one is accepted."""
+    styles = [_auth_style["ok"]] if _auth_style["ok"] else list(AUTH_STYLES)
+    for i, style in enumerate(styles):
+        auth_headers, params = _auth(style)
+        r = requests.post(url, headers={**headers, **auth_headers}, params=params,
+                          timeout=_time_left(deadline), **kwargs)
+        if r.status_code in (401, 403) and i < len(styles) - 1:
+            continue  # this way of sending the key was refused: try the next one
+        r.raise_for_status()
+        _auth_style["ok"] = style
+        return r
+    raise RuntimeError("unreachable")
+
+
+def _generate(model: str, image_part: dict, deadline: float) -> dict:
+    config = {"temperature": 0.4, "maxOutputTokens": 1024,
+              "thinkingConfig": {"thinkingLevel": "minimal"}}  # thinking off: much faster, and the answer isn't cut short
+    payload = {"contents": [{"role": "user", "parts": [image_part, {"text": PROMPT}]}], "generationConfig": config}
+    url = f"{GEMINI_BASE}/v1beta/models/{model}:generateContent"
+    started = time.time()
+    try:
+        r = _post(url, deadline, {"Content-Type": "application/json"}, json=payload)
+    except requests.HTTPError as e:
+        if e.response is None or e.response.status_code != 400 or "thinking" not in e.response.text.lower():
+            raise
+        config.pop("thinkingConfig")  # this model doesn't take the thinking setting: send without it
+        r = _post(url, deadline, {"Content-Type": "application/json"}, json=payload)
+    print(f"[PSL] {model} answered in {time.time() - started:.1f}s", flush=True)
+    return _parse_model_reply(r.json())
+
+
+def _upload_file(jpeg: bytes, deadline: float) -> dict:
+    """Files API upload (the method Google's Gemma docs show); returns a file_data part."""
+    start = _post(
+        f"{GEMINI_BASE}/upload/v1beta/files", deadline,
+        {"X-Goog-Upload-Protocol": "resumable", "X-Goog-Upload-Command": "start",
+         "X-Goog-Upload-Header-Content-Length": str(len(jpeg)),
+         "X-Goog-Upload-Header-Content-Type": "image/jpeg", "Content-Type": "application/json"},
+        json={"file": {"display_name": "psl-photo"}})
+    done = requests.post(start.headers["X-Goog-Upload-URL"], data=jpeg, timeout=_time_left(deadline),
+                         headers={"X-Goog-Upload-Offset": "0", "X-Goog-Upload-Command": "upload, finalize"})
+    done.raise_for_status()
+    info = done.json()["file"]
+    return {"file_data": {"mime_type": "image/jpeg", "file_uri": info["uri"]}}
+
+
+def call_model(jpeg: bytes) -> dict:
+    """Score a JPEG with Gemma 4 via the Gemini API. Raises on any failure (no key, network, bad reply)."""
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+    deadline = time.time() + MODEL_DEADLINE
+    inline = {"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(jpeg).decode()}}
+    last_error = None
+    for model in GEMMA_MODELS:
+        for get_part in (lambda: inline, lambda: _upload_file(jpeg, deadline)):  # inline image first, then upload
+            if deadline - time.time() < 3:
+                raise TimeoutError(f"Gemma took too long (last problem: {last_error!r})")
+            try:
+                return _generate(model, get_part(), deadline)
+            except requests.HTTPError as e:
+                last_error = e
+                code = e.response.status_code if e.response is not None else "?"
+                print(f"[PSL] {model} attempt failed: HTTP {code} {e.response.text[:200] if e.response is not None else ''}", flush=True)
+                if e.response is not None and e.response.status_code in (401, 403):
+                    detail = e.response.text[:300].replace("\n", " ")
+                    raise PermissionError(f"Google refused the API key ({e.response.status_code}): {detail}") from e
+            except Exception as e:
+                print(f"[PSL] {model} attempt failed: {e!r}"[:300], flush=True)
+                last_error = e
+    raise RuntimeError(f"Gemma did not return a usable result: {last_error!r}") from last_error
 
 
 def tier_for(score: float) -> str:
@@ -394,8 +514,9 @@ def sample_result(photo) -> dict:
 def as_jpeg(file_bytes: bytes) -> bytes:
     """Re-encode any upload (including HEIC) as JPEG before sending it to the model."""
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    img.thumbnail((1024, 1024))  # plenty for a face, and keeps the request fast
     buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=92)
+    img.save(buf, format="JPEG", quality=90)
     return buf.getvalue()
 
 
@@ -458,7 +579,7 @@ def render_stage(photo, mode: str):
 def render_header():
     st.markdown(
         '<div class="hero"><h1>🗿 PSL CALCULATOR</h1>'
-        "<p>AI AESTHETICS RATER · POWERED BY PALIGEMMA 3B</p></div>",
+        "<p>AI AESTHETICS RATER · POWERED BY GEMMA 4</p></div>",
         unsafe_allow_html=True,
     )
 
@@ -480,6 +601,8 @@ def render_result(data: dict, fallback: bool):
 """,
         unsafe_allow_html=True,
     )
+    if fallback and data.get("why"):  # why the live analysis didn't run (for fixing it)
+        st.caption(f"Live analysis error: {data['why']}")
 
 # =====================================================================
 # PSL Score page (opened from the home page)
@@ -527,8 +650,10 @@ def render_score_page():
             fallback = False
             try:
                 data = call_model(as_jpeg(photo.getvalue()))
-            except Exception:
+            except Exception as e:
+                print(f"[PSL] live analysis failed, showing sample result: {e!r}", flush=True)  # shows in the terminal / Cloud logs
                 data, fallback = sample_result(photo), True      # live analysis failed: show a labelled sample result
+                data["why"] = f"{type(e).__name__}: {e}"[:400]
             time.sleep(max(0.0, SCAN_SECONDS - (time.time() - started)))
             show_stage("done")                                    # analysis finished: remove the green scan
             res = {"pid": pid, "data": data, "fallback": fallback}
