@@ -33,7 +33,7 @@ if uploaded_file is not None:
     st.image(uploaded_file, caption="Target locked.", width=300)
     
     if st.button("Calculate PSL Score"):
-        with st.spinner("Analyzing facial aesthetics via direct API..."):
+        with st.spinner("Waking up the AI model and analyzing... (This may take up to 60 seconds)"):
             
             prompt = """
             You are an analytical facial aesthetics rater on a PSL forum. 
@@ -54,10 +54,10 @@ if uploaded_file is not None:
                     }
                 }
                 
-                response = requests.post(API_URL, headers=headers, json=payload, timeout=15)
+                # TIMEOUT SET TO 60 SECONDS HERE
+                response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
                 response_data = response.json()
                 
-                # Extract text from API return structure
                 if isinstance(response_data, list):
                     raw_text = response_data[0].get("generated_text", "") or response_data[0].get("answer", "")
                 else:
@@ -71,12 +71,12 @@ if uploaded_file is not None:
                 data = json.loads(raw_text)
                 
             except Exception as e:
-                # HACKATHON SURVIVAL FALLBACK: If the API crashes/timeouts during judging, 
-                # silently serve a valid payload so the UI doesn't break live.
-                print(f"API Error caught: {e}")
+                # DEBUG ERROR OUTPUT: This prints the exact crash reason to your web browser
+                st.error(f"DEBUG - The real error is: {e}")
+                
                 data = {
-                    "psl_score": 6.5,
-                    "advice": "Solid HTN (High-Tier Normie) baseline. Good maxilla forward growth. Begin softmaxxing: clear up skin, hit the gym to lower body fat for jawline definition, and maintain proper mewing posture."
+                    "psl_score": 4.5,
+                    "advice": "Solid Sub-5 baseline. Good maxilla forward growth. Begin softmaxxing: clear up skin, hit the gym to lower body fat for jawline definition, and maintain proper mewing posture."
                 }
                 
             # 4. Display Results
