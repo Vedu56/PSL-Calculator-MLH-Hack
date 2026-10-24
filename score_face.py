@@ -12,6 +12,14 @@ import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from PIL import Image, ImageOps
 
+try:  # iPhone HEIC photos (from app.py); optional - install with: python -m pip install pillow-heif
+    import pillow_heif
+
+    pillow_heif.register_heif_opener()
+    HEIC_SUPPORTED = True
+except ImportError:
+    HEIC_SUPPORTED = False
+
 import landing_page
 import pvp_page
 import site_ui
@@ -29,13 +37,36 @@ PROMPT = (
     'objective advice. Reply ONLY with JSON: {"psl_score": <number>, "advice": "<short string>"}'
 )
 
-# Used ONLY when the live analysis can't be completed (API down, no connection, bad reply...).
-FALLBACK_RESULT = {
-    "psl_score": 6.5,
-    "advice": "Solid HTN baseline. Focus on softmaxxing: skin care, sleep, lower body fat, good posture.",
-}
+UPLOAD_TYPES = ["jpg", "jpeg", "png"] + (["heic", "heif"] if HEIC_SUPPORTED else [])
 
-TIERS = [(2, "SUB-3"), (4, "SUB-5"), (5, "LTN"), (6, "MTN"), (7, "HTN"), (8, "CHADLITE"), (11, "CHAD")]
+# ---- PSL tier scale and advice pools (from app.py) ----
+# (score upper bound, tier label)
+TIERS = [
+    (2.0, "Deformed / Subhuman"),
+    (3.0, "Very Unattractive"),
+    (3.5, "Low-Tier Normie (LTN)"),
+    (4.5, "Mid-Tier Normie (MTN)"),
+    (5.0, "True Mid-Tier Normie"),
+    (6.0, "High-Tier Normie (HTN)"),
+    (7.0, "Chadlite"),
+]
+TOP_TIER = "Chad / True Adam"
+
+EYES_JARGON = [
+    "positive canthal tilt with strong hunter eyes giving an intense predatory gaze",
+    "neutral orbital vector with deep-set sockets and solid under-eye support",
+    "slight negative canthal tilt offset by optimal interpupillary distance and heavy brow ridge framing",
+]
+BONE_JARGON = [
+    "outstanding maxilla forward growth and a razor-sharp gonial angle",
+    "solid ramus height with well-defined zygomatic arches providing clean facial dimorphism",
+    "clean mandibular plane angle and balanced lower third proportions",
+]
+ACTION_JARGON = [
+    "Begin intensive softmaxxing: reduce sodium to eliminate submental water retention, maintain strict mewing posture for upward palatal force, and hit heavy compound lifts to optimize your overall frame.",
+    "Execute hard-softmaxxing protocol: clear up skin micro-texture, focus on neck training for a thicker optical jaw base, and practice proper chewing mechanics to maximize masseter hypertrophy.",
+    "Maintain your baseline while optimizing framing: grow out hair for ideal temporal width, maintain low body fat percentage for peak jawline definition, and lean into your natural dimorphic strengths.",
+]
 
 # How long the scan + loading animation plays (the result is held back until it finishes).
 SCAN_SECONDS = 10
@@ -342,9 +373,31 @@ def call_model(file_bytes: bytes) -> dict:
 
 def tier_for(score: float) -> str:
     for cap, name in TIERS:
-        if score < cap:
+        if score <= cap:
             return name
-    return "CHAD"
+    return TOP_TIER
+
+
+def sample_result(photo) -> dict:
+    """Score + advice from app.py's generator, used when the live model can't answer.
+    It does NOT look at the face: the numbers come from the file's name and size, so the
+    result is shown with the "SAMPLE RESULT" badge."""
+    seed = (len(photo.name) * 17 + photo.size) % 100
+    score = round(3.5 + (seed % 44) / 10, 1)      # 3.5 to 7.8
+    tier = tier_for(score)
+    advice = (
+        f"Classified ranking: {tier}. Facial features display {EYES_JARGON[seed % len(EYES_JARGON)]} "
+        f"paired with {BONE_JARGON[seed % len(BONE_JARGON)]}. {ACTION_JARGON[seed % len(ACTION_JARGON)]}"
+    )
+    return {"psl_score": score, "advice": advice}
+
+
+def as_jpeg(file_bytes: bytes) -> bytes:
+    """Re-encode any upload (including HEIC) as JPEG before sending it to the model."""
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=92)
+    return buf.getvalue()
 
 
 # =====================================================================
@@ -364,7 +417,7 @@ def pick_photo():
     """Upload OR live camera. Returns a Photo (or None)."""
     source = st.radio("Source", ["Upload", "Camera"], horizontal=True, label_visibility="collapsed")
     if source == "Upload":
-        f = st.file_uploader("Upload a selfie", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
+        f = st.file_uploader("Upload a selfie", type=UPLOAD_TYPES, label_visibility="collapsed")
         return Photo(f.getvalue(), f.name) if f else None, source
 
     if "cam_bytes" in st.session_state:                       # already captured: show our big scan stage instead
@@ -428,8 +481,6 @@ def render_result(data: dict, fallback: bool):
 """,
         unsafe_allow_html=True,
     )
-    st.caption("For fun only. An AI score says nothing about your actual worth or attractiveness.")
-
 
 # =====================================================================
 # PSL Score page (opened from the home page)
@@ -476,9 +527,9 @@ def render_score_page():
             started = time.time()
             fallback = False
             try:
-                data = call_model(photo.getvalue())
+                data = call_model(as_jpeg(photo.getvalue()))
             except Exception:
-                data, fallback = dict(FALLBACK_RESULT), True      # live analysis failed: show a labelled sample result
+                data, fallback = sample_result(photo), True      # live analysis failed: show a labelled sample result
             time.sleep(max(0.0, SCAN_SECONDS - (time.time() - started)))
             show_stage("done")                                    # analysis finished: remove the green scan
             res = {"pid": pid, "data": data, "fallback": fallback}
