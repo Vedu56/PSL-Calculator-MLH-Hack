@@ -19,7 +19,7 @@ st.title("AI Aesthetics Rater (PSL Calculator)")
 st.write("Powered by Multi-Agent Vision Architecture.")
 
 # 2. App Logic
-uploaded_file = st.file_uploader("Upload a selfie...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Upload a selfie...", type=["jpg", "jpeg", "png", "heic"])
 
 if uploaded_file is not None:
     st.image(uploaded_file, caption="Target locked.", width=300)
