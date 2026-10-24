@@ -2,7 +2,6 @@ import streamlit as st
 import time
 from PIL import Image
 import pillow_heif
-import score_face
 
 pillow_heif.register_heif_opener()
 # 1. UI Setup (Minimalist Black-and-White Aesthetic)
