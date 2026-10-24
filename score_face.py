@@ -433,7 +433,7 @@ def _post(url: str, deadline: float, headers: dict, **kwargs) -> requests.Respon
 
 
 def _generate(model: str, image_part: dict, deadline: float) -> dict:
-    config = {"temperature": 0.4, "maxOutputTokens": 1024,
+    config = {"temperature": 0.4, "maxOutputTokens": 600,
               "thinkingConfig": {"thinkingLevel": "minimal"}}  # thinking off: much faster, and the answer isn't cut short
     payload = {"contents": [{"role": "user", "parts": [image_part, {"text": PROMPT}]}], "generationConfig": config}
     url = f"{GEMINI_BASE}/v1beta/models/{model}:generateContent"
@@ -514,9 +514,9 @@ def sample_result(photo) -> dict:
 def as_jpeg(file_bytes: bytes) -> bytes:
     """Re-encode any upload (including HEIC) as JPEG before sending it to the model."""
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
-    img.thumbnail((1024, 1024))  # plenty for a face, and keeps the request fast
+    img.thumbnail((640, 640))  # plenty for a face; smaller images make Gemma answer much faster
     buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=90)
+    img.save(buf, format="JPEG", quality=85)
     return buf.getvalue()
 
 
