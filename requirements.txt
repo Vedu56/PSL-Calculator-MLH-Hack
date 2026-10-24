@@ -1,0 +1,5 @@
+streamlit>=1.50
+requests
+python-dotenv
+pillow
+pillow-heif
