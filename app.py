@@ -1,8 +1,10 @@
 import streamlit as st
-import base64
-import json
 import time
+from PIL import Image
+import pillow_heif
+import score_face
 
+pillow_heif.register_heif_opener()
 # 1. UI Setup (Minimalist Black-and-White Aesthetic)
 st.set_page_config(page_title="PSL Calculator", page_icon="🗿", layout="centered")
 st.markdown("""
@@ -79,4 +81,4 @@ if uploaded_file is not None:
 
         # 4. Display Results with Strict Tier Badge
         st.metric(label="Final PSL Score & Ranking", value=f"{psl_score}/10", delta=tier_label)
-        st.success(f"💡 Looksmaxxing Advice: {advice}")
+        st.success(f"💡 Looksmaxxing Advice: \n {advice}")
